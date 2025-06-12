@@ -8,22 +8,14 @@ struct UserHomeView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 25) {
-                // Top row: back button + logo
                 HStack {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "arrow.left")
-                            .font(.title2)
-                            .foregroundColor(.black)
-                    }
 
-                    Spacer()
-
-                    Image("splash_logo")
+                    Image("servepupillogo")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 60, height: 60)
+                        .frame(width: 40, height: 30)
+                    Spacer()
+
                 }
                 .padding(.horizontal, 20)
 
