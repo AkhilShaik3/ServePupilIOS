@@ -3,6 +3,7 @@ import Firebase
 import PhotosUI
 import MapKit
 import FirebaseAuth
+import FirebaseStorage
 
 struct CreateRequestView: View {
     @State private var description = ""
@@ -152,35 +153,57 @@ struct CreateRequestView: View {
 
     func createRequest() {
         guard let user = Auth.auth().currentUser else { return }
-        let uid = user.uid
+        guard let image = selectedImage,
+              let imageData = image.jpegData(compressionQuality: 0.8) else {
+            print("No image selected")
+            return
+        }
 
-        let usersRef = Database.database().reference().child("users").child(uid)
-        usersRef.observeSingleEvent(of: .value) { snapshot in
-            if snapshot.exists() {
-                let requestIdRef = Database.database().reference().child("requests").child(uid).childByAutoId()
+        let filename = UUID().uuidString + ".jpg"
+        let storageRef = Storage.storage().reference().child("request_images").child(filename)
 
-                let requestData: [String: Any] = [
-                    "description": description,
-                    "requestType": requestType,
-                    "place": place,
-                    "latitude": selectedCoordinate.latitude,
-                    "longitude": selectedCoordinate.longitude,
-                    "timestamp": ServerValue.timestamp()
-                ]
+        storageRef.putData(imageData, metadata: nil) { metadata, error in
+            if let error = error {
+                print("Image upload failed: \(error.localizedDescription)")
+                return
+            }
 
-                requestIdRef.setValue(requestData) { error, _ in
-                    if error == nil {
-                        showSuccessAlert = true
-                    } else {
-                        print("Error saving request: \(error?.localizedDescription ?? "Unknown error")")
-                    }
+            storageRef.downloadURL { url, error in
+                guard let downloadURL = url else {
+                    print("Failed to retrieve download URL")
+                    return
                 }
 
-            } else {
-                print("User not found in users reference.")
+                saveRequest(with: downloadURL.absoluteString)
             }
         }
     }
+
+    func saveRequest(with imageUrl: String) {
+        guard let user = Auth.auth().currentUser else { return }
+        let uid = user.uid
+
+        let requestIdRef = Database.database().reference().child("requests").child(uid).childByAutoId()
+
+        let requestData: [String: Any] = [
+            "description": description,
+            "requestType": requestType,
+            "place": place,
+            "latitude": selectedCoordinate.latitude,
+            "longitude": selectedCoordinate.longitude,
+            "timestamp": ServerValue.timestamp(),
+            "imageUrl": imageUrl
+        ]
+
+        requestIdRef.setValue(requestData) { error, _ in
+            if error == nil {
+                showSuccessAlert = true
+            } else {
+                print("Error saving request: \(error?.localizedDescription ?? "Unknown error")")
+            }
+        }
+    }
+
 }
 
 struct MapPinLocation: Identifiable {

@@ -1,13 +1,4 @@
-//
-//  RequestModel.swift
-//  servepupil
-//
-//  Created by Admin on 6/12/25.
-//
-
-
 import Foundation
-import FirebaseDatabase
 
 struct RequestModel: Identifiable {
     let id: String
@@ -17,6 +8,7 @@ struct RequestModel: Identifiable {
     let latitude: Double
     let longitude: Double
     let timestamp: Double
+    let imageUrl: String?
 
     init?(id: String, data: [String: Any]) {
         guard
@@ -37,5 +29,6 @@ struct RequestModel: Identifiable {
         self.latitude = latitude
         self.longitude = longitude
         self.timestamp = timestamp
+        self.imageUrl = data["imageUrl"] as? String
     }
 }
