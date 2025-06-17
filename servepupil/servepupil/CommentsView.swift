@@ -2,12 +2,12 @@ import SwiftUI
 import Firebase
 import FirebaseAuth
 
-struct Comment: Identifiable {
+struct Comment: Identifiable, Equatable {
     let id: String
     let uid: String
     let text: String
     let timestamp: Double
-    var userName: String = "Unknown"
+    var userName: String
 }
 
 struct CommentsView: View {
@@ -17,28 +17,45 @@ struct CommentsView: View {
 
     var body: some View {
         VStack {
-            List(comments) { comment in
-                VStack(alignment: .leading) {
-                    Text(comment.userName)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text(comment.text)
+            if comments.isEmpty {
+                Spacer()
+                Text("No comments yet")
+                    .foregroundColor(.gray)
+                Spacer()
+            } else {
+                List(comments) { comment in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(comment.userName)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Text(formatTimestamp(comment.timestamp))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        Text(comment.text)
+                    }
+                    .padding(.vertical, 4)
                 }
             }
+
+            Divider()
 
             HStack {
                 TextField("Enter comment", text: $newComment)
                     .textFieldStyle(.roundedBorder)
 
-                Button("Send") {
+                Button("Post") {
                     postComment()
                 }
+                .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
         }
         .navigationTitle("Comments")
         .onAppear {
-            fetchComments()
+            observeComments()
         }
     }
 
@@ -54,7 +71,7 @@ struct CommentsView: View {
 
         let data: [String: Any] = [
             "uid": user.uid,
-            "text": newComment,
+            "text": newComment.trimmingCharacters(in: .whitespacesAndNewlines),
             "timestamp": ServerValue.timestamp()
         ]
 
@@ -62,7 +79,7 @@ struct CommentsView: View {
         newComment = ""
     }
 
-    func fetchComments() {
+    func observeComments() {
         let ref = Database.database().reference()
             .child("requests")
             .child(request.ownerUid)
@@ -70,31 +87,42 @@ struct CommentsView: View {
             .child("comments")
 
         ref.observe(.value) { snapshot in
-            var temp: [Comment] = []
+            var updated: [Comment] = []
+            let dispatchGroup = DispatchGroup()
 
             for case let child as DataSnapshot in snapshot.children {
                 if let data = child.value as? [String: Any],
                    let uid = data["uid"] as? String,
                    let text = data["text"] as? String,
                    let timestamp = data["timestamp"] as? Double {
-                    var comment = Comment(id: child.key, uid: uid, text: text, timestamp: timestamp)
 
-                    // Fetch username from users table
+                    dispatchGroup.enter()
+
+                    // Fetch username
                     Database.database().reference()
                         .child("users")
                         .child(uid)
                         .child("name")
                         .observeSingleEvent(of: .value) { nameSnap in
-                            if let name = nameSnap.value as? String {
-                                comment.userName = name
-                            }
-                            DispatchQueue.main.async {
-                                temp.append(comment)
-                                comments = temp.sorted { $0.timestamp < $1.timestamp }
-                            }
+                            let name = nameSnap.value as? String ?? "Unknown"
+                            let comment = Comment(id: child.key, uid: uid, text: text, timestamp: timestamp, userName: name)
+                            updated.append(comment)
+                            dispatchGroup.leave()
                         }
                 }
             }
+
+            dispatchGroup.notify(queue: .main) {
+                self.comments = updated.sorted(by: { $0.timestamp > $1.timestamp })
+            }
         }
+    }
+
+    func formatTimestamp(_ timestamp: Double) -> String {
+        let date = Date(timeIntervalSince1970: timestamp / 1000)
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }

@@ -71,14 +71,14 @@ struct RequestCardView: View {
                         .padding()
                         .background(Color.blue)
                         .foregroundColor(.white)
-                        .cornerRadius(8)
+                        .cornerRadius(14)
 
                     Button("Delete") { }
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.red)
                         .foregroundColor(.white)
-                        .cornerRadius(8)
+                        .cornerRadius(14)
                 }
             } else {
                 Button("Report Post") { }
