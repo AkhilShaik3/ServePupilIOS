@@ -1,20 +1,23 @@
 import SwiftUI
-import SDWebImageSwiftUI
 import Firebase
 import FirebaseAuth
+import SDWebImageSwiftUI
 
 struct RequestCardView: View {
     let request: RequestModel
     var showEditDelete: Bool = false
 
+    @State private var username = ""
     @State private var likeCount = 0
     @State private var commentCount = 0
     @State private var likedByMe = false
+
     private let currentUid = Auth.auth().currentUser?.uid ?? ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
+                // Image
                 if let imageUrl = request.imageUrl, let url = URL(string: imageUrl) {
                     WebImage(url: url)
                         .resizable()
@@ -32,6 +35,7 @@ struct RequestCardView: View {
                         )
                 }
 
+                // Details
                 VStack(alignment: .leading, spacing: 4) {
                     Text(request.description)
                         .fontWeight(.semibold)
@@ -44,6 +48,7 @@ struct RequestCardView: View {
 
                 Spacer()
 
+                // Like + Comment
                 VStack(spacing: 5) {
                     Button(action: toggleLike) {
                         HStack {
@@ -61,9 +66,28 @@ struct RequestCardView: View {
                     }
                 }
                 .font(.subheadline)
-                .foregroundColor(.black)
             }
 
+            // 👇 Username tap based on UID
+            if request.ownerUid == currentUid {
+                NavigationLink(destination: ProfileView()) {
+                    Text(username)
+                        .font(.caption)
+                        .bold()
+                        .foregroundColor(.black)
+                        .padding(.top, 4)
+                }
+            } else {
+                NavigationLink(destination: UserProfileView(uid: request.ownerUid)) {
+                    Text(username)
+                        .font(.caption)
+                        .bold()
+                        .foregroundColor(.black)
+                        .padding(.top, 4)
+                }
+            }
+
+            // Report or Edit/Delete
             if showEditDelete {
                 HStack(spacing: 20) {
                     Button("Edit") { }
@@ -95,6 +119,7 @@ struct RequestCardView: View {
         .shadow(radius: 1)
         .padding(.horizontal)
         .onAppear {
+            fetchUsername()
             fetchLikeStatus()
             fetchCommentCount()
         }
@@ -136,6 +161,19 @@ struct RequestCardView: View {
 
         ref.observe(.value) { snapshot in
             commentCount = Int(snapshot.childrenCount)
+        }
+    }
+
+    func fetchUsername() {
+        let ref = Database.database().reference()
+            .child("users")
+            .child(request.ownerUid)
+            .child("name")
+
+        ref.observeSingleEvent(of: .value) { snapshot in
+            if let name = snapshot.value as? String {
+                self.username = name
+            }
         }
     }
 }
