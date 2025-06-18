@@ -7,6 +7,7 @@ struct LoginView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var showUserHome = false
+    @State private var showAdminHome = false
 
     var body: some View {
         NavigationView {
@@ -22,6 +23,7 @@ struct LoginView: View {
 
                 TextField("Email", text: $email)
                     .autocapitalization(.none)
+                    .keyboardType(.emailAddress)
                     .padding()
                     .background(Color(.systemGray6))
                     .cornerRadius(10)
@@ -62,13 +64,14 @@ struct LoginView: View {
                 Alert(title: Text("Message"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
             .fullScreenCover(isPresented: $showUserHome, onDismiss: {
-                // Reset when coming back
-                email = ""
-                password = ""
-                alertMessage = ""
-                showAlert = false
+                clearFields()
             }) {
                 UserHomeView()
+            }
+            .fullScreenCover(isPresented: $showAdminHome, onDismiss: {
+                clearFields()
+            }) {
+                AdminHomeView()
             }
         }
         .navigationBarHidden(true)
@@ -79,12 +82,20 @@ struct LoginView: View {
             if let error = error {
                 alertMessage = "Login failed: \(error.localizedDescription)"
                 showAlert = true
-            } else if email.lowercased() == "admin@gmail.com" {
-                alertMessage = "Admin login is not supported in this view."
-                showAlert = true
             } else {
-                showUserHome = true
+                if email.lowercased() == "admin@gmail.com" {
+                    showAdminHome = true
+                } else {
+                    showUserHome = true
+                }
             }
         }
+    }
+
+    func clearFields() {
+        email = ""
+        password = ""
+        alertMessage = ""
+        showAlert = false
     }
 }
