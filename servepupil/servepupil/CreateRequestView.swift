@@ -159,31 +159,33 @@ struct CreateRequestView: View {
             return
         }
 
-        let filename = UUID().uuidString + ".jpg"
+        let uid = user.uid
+        let requestRef = Database.database().reference().child("requests").child(uid).childByAutoId()
+        let requestId = requestRef.key ?? UUID().uuidString
+
+        let filename = "\(requestId).jpg"
         let storageRef = Storage.storage().reference().child("request_images").child(filename)
 
-        storageRef.putData(imageData, metadata: nil) { metadata, error in
+        storageRef.putData(imageData, metadata: nil) { _, error in
             if let error = error {
                 print("Image upload failed: \(error.localizedDescription)")
                 return
             }
 
-            storageRef.downloadURL { url, error in
+            storageRef.downloadURL { url, _ in
                 guard let downloadURL = url else {
-                    print("Failed to retrieve download URL")
+                    print("Failed to get image URL")
                     return
                 }
 
-                saveRequest(with: downloadURL.absoluteString)
+                saveRequest(with: downloadURL.absoluteString, requestId: requestId)
             }
         }
     }
 
-    func saveRequest(with imageUrl: String) {
+    func saveRequest(with imageUrl: String, requestId: String) {
         guard let user = Auth.auth().currentUser else { return }
         let uid = user.uid
-
-        let requestIdRef = Database.database().reference().child("requests").child(uid).childByAutoId()
 
         let requestData: [String: Any] = [
             "description": description,
@@ -192,10 +194,16 @@ struct CreateRequestView: View {
             "latitude": selectedCoordinate.latitude,
             "longitude": selectedCoordinate.longitude,
             "timestamp": ServerValue.timestamp(),
-            "imageUrl": imageUrl
+            "imageUrl": imageUrl,
+            "likes": 0,
+            "likedBy": [],
+            "comments": [],
+            "ownerUid": uid,
+            "requestId": requestId
         ]
 
-        requestIdRef.setValue(requestData) { error, _ in
+        let requestRef = Database.database().reference().child("requests").child(uid).child(requestId)
+        requestRef.setValue(requestData) { error, _ in
             if error == nil {
                 showSuccessAlert = true
             } else {
@@ -203,7 +211,6 @@ struct CreateRequestView: View {
             }
         }
     }
-
 }
 
 struct MapPinLocation: Identifiable {
