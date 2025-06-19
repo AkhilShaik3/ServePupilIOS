@@ -19,7 +19,9 @@ struct CreateRequestView: View {
     @StateObject private var searchVM = SearchCompleterViewModel()
     @State private var selectedImage: UIImage?
     @State private var imageItem: PhotosPickerItem?
-    @State private var showSuccessAlert = false
+    
+    @State private var showAlert = false
+    @State private var alertMessage = ""
 
     @Environment(\.dismiss) var dismiss
 
@@ -113,12 +115,8 @@ struct CreateRequestView: View {
             Spacer()
         }
         .padding()
-        .alert("Request Created", isPresented: $showSuccessAlert) {
-            Button("OK") {
-                dismiss()
-            }
-        } message: {
-            Text("Your request has been submitted successfully.")
+        .alert(isPresented: $showAlert) {
+            Alert(title: Text("Notice"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
     }
 
@@ -153,32 +151,52 @@ struct CreateRequestView: View {
 
     func createRequest() {
         guard let user = Auth.auth().currentUser else { return }
-        guard let image = selectedImage,
-              let imageData = image.jpegData(compressionQuality: 0.8) else {
-            print("No image selected")
-            return
-        }
 
         let uid = user.uid
-        let requestRef = Database.database().reference().child("requests").child(uid).childByAutoId()
-        let requestId = requestRef.key ?? UUID().uuidString
+        let usersRef = Database.database().reference().child("users").child(uid)
 
-        let filename = "\(requestId).jpg"
-        let storageRef = Storage.storage().reference().child("request_images").child(filename)
-
-        storageRef.putData(imageData, metadata: nil) { _, error in
-            if let error = error {
-                print("Image upload failed: \(error.localizedDescription)")
-                return
-            }
-
-            storageRef.downloadURL { url, _ in
-                guard let downloadURL = url else {
-                    print("Failed to get image URL")
+        usersRef.observeSingleEvent(of: .value) { snapshot in
+            if snapshot.exists() {
+                // Check required fields
+                guard !description.isEmpty, !requestType.isEmpty, !place.isEmpty else {
+                    alertMessage = "Please fill in all fields."
+                    showAlert = true
                     return
                 }
 
-                saveRequest(with: downloadURL.absoluteString, requestId: requestId)
+                guard let image = selectedImage,
+                      let imageData = image.jpegData(compressionQuality: 0.8) else {
+                    alertMessage = "Please select an image."
+                    showAlert = true
+                    return
+                }
+
+                let requestRef = Database.database().reference().child("requests").child(uid).childByAutoId()
+                let requestId = requestRef.key ?? UUID().uuidString
+                let filename = "\(requestId).jpg"
+                let storageRef = Storage.storage().reference().child("request_images").child(filename)
+
+                storageRef.putData(imageData, metadata: nil) { _, error in
+                    if let error = error {
+                        alertMessage = "Image upload failed: \(error.localizedDescription)"
+                        showAlert = true
+                        return
+                    }
+
+                    storageRef.downloadURL { url, _ in
+                        guard let downloadURL = url else {
+                            alertMessage = "Failed to retrieve image URL."
+                            showAlert = true
+                            return
+                        }
+
+                        saveRequest(with: downloadURL.absoluteString, requestId: requestId)
+                    }
+                }
+
+            } else {
+                alertMessage = "You are not a registered user. Please complete your profile."
+                showAlert = true
             }
         }
     }
@@ -204,10 +222,17 @@ struct CreateRequestView: View {
 
         let requestRef = Database.database().reference().child("requests").child(uid).child(requestId)
         requestRef.setValue(requestData) { error, _ in
-            if error == nil {
-                showSuccessAlert = true
+            if let error = error {
+                alertMessage = "Error saving request: \(error.localizedDescription)"
+                showAlert = true
             } else {
-                print("Error saving request: \(error?.localizedDescription ?? "Unknown error")")
+                alertMessage = "Your request has been submitted successfully."
+                showAlert = true
+                // Optional: Reset fields
+                description = ""
+                requestType = ""
+                place = ""
+                selectedImage = nil
             }
         }
     }
