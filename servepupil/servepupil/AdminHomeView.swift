@@ -30,7 +30,7 @@ struct AdminHomeView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.orange)
+                .background(Color.teal)
                 .foregroundColor(.white)
                 .cornerRadius(10)
 
@@ -39,7 +39,7 @@ struct AdminHomeView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.purple)
+                .background(Color.teal)
                 .foregroundColor(.white)
                 .cornerRadius(10)
 
