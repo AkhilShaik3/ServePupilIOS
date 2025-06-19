@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ReportedCommentsView: View {
     var body: some View {
-        Text("Reported Comments")
+        Text("Comments")
             .font(.title)
             .padding()
     }
