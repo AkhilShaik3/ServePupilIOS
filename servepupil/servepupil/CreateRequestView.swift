@@ -4,6 +4,32 @@ import PhotosUI
 import MapKit
 import FirebaseAuth
 import FirebaseStorage
+import CoreLocation
+
+class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    let manager = CLLocationManager()
+    @Published var userLocation: CLLocationCoordinate2D?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.requestWhenInUseAuthorization()
+        manager.startUpdatingLocation()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.last {
+            DispatchQueue.main.async {
+                self.userLocation = location.coordinate
+            }
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Location fetch failed: \(error.localizedDescription)")
+    }
+}
 
 struct CreateRequestView: View {
     @State private var description = ""
@@ -17,9 +43,10 @@ struct CreateRequestView: View {
     )
 
     @StateObject private var searchVM = SearchCompleterViewModel()
+    @StateObject private var locationManager = LocationManager()
     @State private var selectedImage: UIImage?
     @State private var imageItem: PhotosPickerItem?
-    
+
     @State private var showAlert = false
     @State private var alertMessage = ""
 
@@ -72,12 +99,9 @@ struct CreateRequestView: View {
             if !searchVM.results.isEmpty {
                 List(searchVM.results, id: \.title) { result in
                     VStack(alignment: .leading) {
-                        Text(result.title)
-                            .fontWeight(.semibold)
+                        Text(result.title).fontWeight(.semibold)
                         if !result.subtitle.isEmpty {
-                            Text(result.subtitle)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                            Text(result.subtitle).font(.subheadline).foregroundColor(.gray)
                         }
                     }
                     .contentShape(Rectangle())
@@ -115,6 +139,15 @@ struct CreateRequestView: View {
             Spacer()
         }
         .padding()
+        .onAppear {
+            locationManager.manager.startUpdatingLocation()
+        }
+        .onReceive(locationManager.$userLocation) { location in
+            if let location = location {
+                region.center = location
+                selectedCoordinate = location
+            }
+        }
         .alert(isPresented: $showAlert) {
             Alert(title: Text("Notice"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
@@ -157,7 +190,6 @@ struct CreateRequestView: View {
 
         usersRef.observeSingleEvent(of: .value) { snapshot in
             if snapshot.exists() {
-                // Check required fields
                 guard !description.isEmpty, !requestType.isEmpty, !place.isEmpty else {
                     alertMessage = "Please fill in all fields."
                     showAlert = true
@@ -228,7 +260,6 @@ struct CreateRequestView: View {
             } else {
                 alertMessage = "Your request has been submitted successfully."
                 showAlert = true
-                // Optional: Reset fields
                 description = ""
                 requestType = ""
                 place = ""
