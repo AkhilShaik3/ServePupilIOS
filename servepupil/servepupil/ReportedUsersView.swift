@@ -35,21 +35,22 @@ struct ReportedUsersView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .listStyle(PlainListStyle())
             }
         }
-        .padding()
+        .padding(.horizontal)
         .onAppear {
-            fetchReportedUsers()
+            listenToReportedUsers()
         }
         .alert(alertMessage, isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
         }
     }
 
-    func fetchReportedUsers() {
+    func listenToReportedUsers() {
         let reportRef = Database.database().reference().child("reported_content/users")
 
-        reportRef.observeSingleEvent(of: .value) { snapshot in
+        reportRef.observe(.value) { snapshot in
             var userList: [(String, String, String)] = []
             let group = DispatchGroup()
 
@@ -78,7 +79,6 @@ struct ReportedUsersView: View {
         let userRef = Database.database().reference().child("users").child(uid)
         let reportRef = Database.database().reference().child("reported_content/users").child(uid)
 
-        // 1. Set isBlocked = true
         userRef.child("isBlocked").setValue(true) { error, _ in
             if let error = error {
                 alertMessage = "Failed to block user: \(error.localizedDescription)"
@@ -86,13 +86,11 @@ struct ReportedUsersView: View {
                 return
             }
 
-            // 2. Remove from reported_content
             reportRef.removeValue { error, _ in
                 if error != nil {
-                    alertMessage = "Failed to update report list."
+                    alertMessage = "Failed to remove from report list."
                 } else {
                     alertMessage = "User blocked successfully."
-                    fetchReportedUsers() // Refresh the list
                 }
                 showAlert = true
             }

@@ -39,38 +39,36 @@ struct ReportedCommentsView: View {
                     }
                     .padding(.vertical, 5)
                 }
+                .listStyle(PlainListStyle())
             }
         }
         .padding()
         .onAppear {
-            fetchReportedComments()
+            listenToReportedComments()
         }
         .alert(alertMessage, isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
         }
     }
 
-    func fetchReportedComments() {
+    func listenToReportedComments() {
         let reportRef = Database.database().reference().child("reported_content/comments")
 
-        reportRef.observeSingleEvent(of: .value) { snapshot in
+        // 🔁 Listen for live changes
+        reportRef.observe(.value) { snapshot in
             var commentIDs: [String] = []
 
             for case let child as DataSnapshot in snapshot.children {
                 commentIDs.append(child.key)
             }
 
-            // If nothing is reported, clear the list
             if commentIDs.isEmpty {
-                DispatchQueue.main.async {
-                    self.reportedComments = []
-                }
+                self.reportedComments = []
             } else {
                 fetchAllRequestsToMatchComments(commentIDs: commentIDs)
             }
         }
     }
-
 
     func fetchAllRequestsToMatchComments(commentIDs: [String]) {
         let requestsRef = Database.database().reference().child("requests")
@@ -106,7 +104,6 @@ struct ReportedCommentsView: View {
         }
     }
 
-
     func fetchUserName(uid: String, completion: @escaping (String) -> Void) {
         let ref = Database.database().reference().child("users").child(uid).child("name")
 
@@ -130,7 +127,6 @@ struct ReportedCommentsView: View {
                             .child("comments")
                             .child(comment.id)
 
-                        // First delete the comment
                         commentRef.removeValue { error, _ in
                             if error != nil {
                                 alertMessage = "Failed to delete comment."
@@ -138,24 +134,20 @@ struct ReportedCommentsView: View {
                                 return
                             }
 
-                            // Then remove from reported_content
                             Database.database().reference()
                                 .child("reported_content/comments")
                                 .child(comment.id)
                                 .removeValue { error, _ in
                                     if error != nil {
                                         alertMessage = "Failed to update report list."
-                                        showAlert = true
                                     } else {
                                         alertMessage = "Comment deleted successfully."
-                                        showAlert = true
-                                        // ✅ Now refresh the view
-                                        fetchReportedComments()
                                     }
+                                    showAlert = true
                                 }
                         }
 
-                        return // stop further looping
+                        return
                     }
                 }
             }
@@ -164,7 +156,6 @@ struct ReportedCommentsView: View {
             showAlert = true
         }
     }
-
 
     func formatTimestamp(_ timestamp: Double) -> String {
         let date = Date(timeIntervalSince1970: timestamp / 1000)

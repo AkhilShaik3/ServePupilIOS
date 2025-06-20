@@ -32,13 +32,15 @@ struct ReportedRequestsView: View {
             .padding()
         }
         .onAppear {
-            fetchReportedRequests()
+            startListeningForReportedRequests()
         }
     }
 
-    func fetchReportedRequests() {
+    func startListeningForReportedRequests() {
         let reportRef = Database.database().reference().child("reported_content").child("requests")
-        reportRef.observeSingleEvent(of: .value) { snapshot in
+
+        // ✅ Live listen to reported requests list
+        reportRef.observe(.value) { snapshot in
             var requestIds: [(id: String, ownerUid: String)] = []
 
             for child in snapshot.children {

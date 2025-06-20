@@ -20,15 +20,17 @@ struct ViewOthersRequestsView: View {
             .padding()
         }
         .onAppear {
-            fetchAllRequests()
+            listenToRequests()
         }
     }
 
-    func fetchAllRequests() {
+    func listenToRequests() {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
 
         let ref = Database.database().reference().child("requests")
-        ref.observeSingleEvent(of: .value) { snapshot in
+
+        // ✅ Listen for live updates
+        ref.observe(.value) { snapshot in
             var allRequests: [RequestModel] = []
 
             for userSnap in snapshot.children {
