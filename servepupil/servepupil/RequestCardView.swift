@@ -72,9 +72,11 @@ struct RequestCardView: View {
                             Image(systemName: "heart")
                             Text("\(likeCount)")
                         }
-                        HStack {
-                            Image(systemName: "message")
-                            Text("\(commentCount)")
+                        NavigationLink(destination: CommentsView(request: request)) {
+                            HStack {
+                                Image(systemName: "message")
+                                Text("\(commentCount)")
+                            }
                         }
                     }
                 }

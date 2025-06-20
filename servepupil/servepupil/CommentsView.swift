@@ -15,6 +15,10 @@ struct CommentsView: View {
     @State private var comments: [Comment] = []
     @State private var newComment = ""
 
+    var isAdmin: Bool {
+        Auth.auth().currentUser?.email == "admin@gmail.com"
+    }
+
     var body: some View {
         VStack {
             if comments.isEmpty {
@@ -42,16 +46,22 @@ struct CommentsView: View {
 
             Divider()
 
-            HStack {
-                TextField("Enter comment", text: $newComment)
-                    .textFieldStyle(.roundedBorder)
+            if !isAdmin {
+                HStack {
+                    TextField("Enter comment", text: $newComment)
+                        .textFieldStyle(.roundedBorder)
 
-                Button("Post") {
-                    postComment()
+                    Button("Post") {
+                        postComment()
+                    }
+                    .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .padding()
+            } else {
+                Text("Admins can only view comments.")
+                    .foregroundColor(.gray)
+                    .padding(.bottom)
             }
-            .padding()
         }
         .navigationTitle("Comments")
         .onAppear {
@@ -98,7 +108,6 @@ struct CommentsView: View {
 
                     dispatchGroup.enter()
 
-                    // Fetch username
                     Database.database().reference()
                         .child("users")
                         .child(uid)
