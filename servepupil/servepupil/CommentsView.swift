@@ -14,6 +14,12 @@ struct CommentsView: View {
     let request: RequestModel
     @State private var comments: [Comment] = []
     @State private var newComment = ""
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+
+    var currentUserId: String {
+        Auth.auth().currentUser?.uid ?? ""
+    }
 
     var isAdmin: Bool {
         Auth.auth().currentUser?.email == "admin@gmail.com"
@@ -27,20 +33,39 @@ struct CommentsView: View {
                     .foregroundColor(.gray)
                 Spacer()
             } else {
-                List(comments) { comment in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(comment.userName)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Spacer()
-                            Text(formatTimestamp(comment.timestamp))
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                List {
+                    ForEach(comments) { comment in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(comment.userName)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Spacer()
+                                Text(formatTimestamp(comment.timestamp))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            HStack {
+                            Text(comment.text)
+                                Spacer()
+                                if !isAdmin && comment.uid != currentUserId {
+                                    Button("Report") {
+                                        reportComment(comment)
+                                    }
+                                    .foregroundColor(.red)
+                                }
+
+                                if isAdmin {
+                                    Button("Delete") {
+                                        deleteComment(comment)
+                                    }
+                                    .foregroundColor(.red)
+                                }
+                            }
                         }
-                        Text(comment.text)
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                 }
             }
 
@@ -58,7 +83,7 @@ struct CommentsView: View {
                 }
                 .padding()
             } else {
-                Text("Admins can only view comments.")
+                Text("Admins can only view and manage comments.")
                     .foregroundColor(.gray)
                     .padding(.bottom)
             }
@@ -66,6 +91,11 @@ struct CommentsView: View {
         .navigationTitle("Comments")
         .onAppear {
             observeComments()
+        }
+        .alert("Notice", isPresented: $showAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
         }
     }
 
@@ -126,6 +156,43 @@ struct CommentsView: View {
             }
         }
     }
+
+    func deleteComment(_ comment: Comment) {
+        let ref = Database.database().reference()
+            .child("requests")
+            .child(request.ownerUid)
+            .child(request.id)
+            .child("comments")
+            .child(comment.id)
+
+        ref.removeValue()
+    }
+
+    func reportComment(_ comment: Comment) {
+        let reportRef = Database.database().reference()
+            .child("reported_content")
+            .child("comments")
+            .child(comment.id)
+
+        reportRef.observeSingleEvent(of: .value) { snapshot in
+            if snapshot.exists() {
+                alertMessage = "Comment has already been reported."
+                showAlert = true
+            } else {
+                reportRef.setValue(true) { error, _ in
+                    if error == nil {
+                        alertMessage = "Comment has been reported."
+                        showAlert = true
+                    } else {
+                        alertMessage = "Error reporting comment."
+                        showAlert = true
+                    }
+                }
+            }
+        }
+    }
+
+
 
     func formatTimestamp(_ timestamp: Double) -> String {
         let date = Date(timeIntervalSince1970: timestamp / 1000)
