@@ -20,15 +20,17 @@ struct ViewMyRequestsView: View {
             }
         }
         .onAppear {
-            fetchMyRequests()
+            listenToMyRequests()
         }
     }
 
-    func fetchMyRequests() {
+    func listenToMyRequests() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
 
         let ref = Database.database().reference().child("requests").child(uid)
-        ref.observeSingleEvent(of: .value) { snapshot in
+
+        // ✅ Live updates listener
+        ref.observe(.value) { snapshot in
             var loaded: [RequestModel] = []
 
             for child in snapshot.children {

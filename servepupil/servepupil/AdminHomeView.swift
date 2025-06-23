@@ -25,23 +25,25 @@ struct AdminHomeView: View {
                                 }
 
 
-                Button("View Reports") {
-                    // Navigate to reports list
+                NavigationLink(destination: ReportDashboardView()) {
+                    Text("View Reports")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.teal)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.teal)
-                .foregroundColor(.white)
-                .cornerRadius(10)
 
-                Button("View Requests") {
-                    // Navigate to requests list
+
+                NavigationLink(destination: AllUserRequestsView()) {
+                    Text("View Requests")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.teal)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.teal)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+
 
                 Button("Logout") {
                     try? Auth.auth().signOut()

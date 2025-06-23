@@ -1,11 +1,3 @@
-//
-//  UserProfileView.swift
-//  servepupil
-//
-//  Created by Admin on 6/17/25.
-//
-
-
 import SwiftUI
 import SDWebImageSwiftUI
 import Firebase
@@ -19,6 +11,9 @@ struct UserProfileView: View {
     @State private var followers = 0
     @State private var following = 0
     @State private var profileImageUrl: String?
+
+    @State private var showAlert = false
+    @State private var alertMessage = ""
 
     var body: some View {
         ScrollView {
@@ -73,13 +68,15 @@ struct UserProfileView: View {
                         .cornerRadius(8)
                 }
 
-                Button("Report User") {}
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    .padding(.horizontal)
+                Button("Report User") {
+                    reportUser()
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.red)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+                .padding(.horizontal)
             }
             .padding()
         }
@@ -87,6 +84,9 @@ struct UserProfileView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             loadProfile()
+        }
+        .alert(alertMessage, isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
         }
     }
 
@@ -100,6 +100,29 @@ struct UserProfileView: View {
                 followers = data["followers"] as? Int ?? 0
                 following = data["following"] as? Int ?? 0
                 profileImageUrl = data["imageUrl"] as? String
+            }
+        }
+    }
+
+    func reportUser() {
+        let reportRef = Database.database().reference()
+            .child("reported_content")
+            .child("users")
+            .child(uid)
+
+        reportRef.observeSingleEvent(of: .value) { snapshot in
+            if snapshot.exists() {
+                alertMessage = "User has already been reported."
+                showAlert = true
+            } else {
+                reportRef.setValue(true) { error, _ in
+                    if let error = error {
+                        alertMessage = "Failed to report user: \(error.localizedDescription)"
+                    } else {
+                        alertMessage = "User reported successfully."
+                    }
+                    showAlert = true
+                }
             }
         }
     }
