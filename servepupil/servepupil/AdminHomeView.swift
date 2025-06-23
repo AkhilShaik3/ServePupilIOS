@@ -35,14 +35,15 @@ struct AdminHomeView: View {
                 }
 
 
-                Button("View Requests") {
-                    // Navigate to requests list
+                NavigationLink(destination: AllUserRequestsView()) {
+                    Text("View Requests")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.teal)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.teal)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+
 
                 Button("Logout") {
                     try? Auth.auth().signOut()
