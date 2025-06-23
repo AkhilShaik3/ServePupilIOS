@@ -1,16 +1,23 @@
 import SwiftUI
-import SDWebImageSwiftUI
 import Firebase
 import FirebaseAuth
+import SDWebImageSwiftUI
 
 struct RequestCardView: View {
     let request: RequestModel
     var showEditDelete: Bool = false
+    var onDelete: (() -> Void)? = nil  // ✅ callback for UI refresh
 
+    @State private var username = ""
     @State private var likeCount = 0
     @State private var commentCount = 0
     @State private var likedByMe = false
+    @State private var showReportAlert = false
+
     private let currentUid = Auth.auth().currentUser?.uid ?? ""
+    private var isAdmin: Bool {
+        Auth.auth().currentUser?.email == "admin@gmail.com"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -45,48 +52,84 @@ struct RequestCardView: View {
                 Spacer()
 
                 VStack(spacing: 5) {
-                    Button(action: toggleLike) {
+                    if !isAdmin {
+                        Button(action: toggleLike) {
+                            HStack {
+                                Image(systemName: likedByMe ? "heart.fill" : "heart")
+                                    .foregroundColor(likedByMe ? .red : .gray)
+                                Text("\(likeCount)")
+                            }
+                        }
+
+                        NavigationLink(destination: CommentsView(request: request)) {
+                            HStack {
+                                Image(systemName: "message")
+                                Text("\(commentCount)")
+                            }
+                        }
+                    } else {
                         HStack {
-                            Image(systemName: likedByMe ? "heart.fill" : "heart")
-                                .foregroundColor(likedByMe ? .red : .gray)
+                            Image(systemName: "heart")
                             Text("\(likeCount)")
                         }
-                    }
-
-                    NavigationLink(destination: CommentsView(request: request)) {
-                        HStack {
-                            Image(systemName: "message")
-                            Text("\(commentCount)")
+                        NavigationLink(destination: CommentsView(request: request)) {
+                            HStack {
+                                Image(systemName: "message")
+                                Text("\(commentCount)")
+                            }
                         }
                     }
                 }
                 .font(.subheadline)
-                .foregroundColor(.black)
+            }
+
+            if request.ownerUid == currentUid {
+                NavigationLink(destination: ProfileView()) {
+                    Text(username)
+                        .font(.caption)
+                        .bold()
+                        .foregroundColor(.black)
+                        .padding(.top, 4)
+                }
+            } else {
+                NavigationLink(destination: UserProfileView(uid: request.ownerUid)) {
+                    Text(username)
+                        .font(.caption)
+                        .bold()
+                        .foregroundColor(.black)
+                        .padding(.top, 4)
+                }
             }
 
             if showEditDelete {
                 HStack(spacing: 20) {
-                    Button("Edit") { }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(14)
+                    if !isAdmin {
+                        Button("Edit") { }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(14)
+                    }
 
-                    Button("Delete") { }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.red)
-                        .foregroundColor(.white)
-                        .cornerRadius(14)
-                }
-            } else {
-                Button("Report Post") { }
+                    Button("Delete") {
+                        deleteRequest()
+                    }
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.red)
                     .foregroundColor(.white)
-                    .cornerRadius(8)
+                    .cornerRadius(14)
+                }
+            } else {
+                Button("Report Post") {
+                    reportRequest()
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.red)
+                .foregroundColor(.white)
+                .cornerRadius(8)
             }
         }
         .padding()
@@ -95,8 +138,14 @@ struct RequestCardView: View {
         .shadow(radius: 1)
         .padding(.horizontal)
         .onAppear {
+            fetchUsername()
             fetchLikeStatus()
             fetchCommentCount()
+        }
+        .alert("Reported", isPresented: $showReportAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("This post has been successfully reported.")
         }
     }
 
@@ -137,5 +186,56 @@ struct RequestCardView: View {
         ref.observe(.value) { snapshot in
             commentCount = Int(snapshot.childrenCount)
         }
+    }
+
+    func fetchUsername() {
+        let ref = Database.database().reference()
+            .child("users")
+            .child(request.ownerUid)
+            .child("name")
+
+        ref.observeSingleEvent(of: .value) { snapshot in
+            if let name = snapshot.value as? String {
+                self.username = name
+            }
+        }
+    }
+
+    func reportRequest() {
+        let reportRef = Database.database().reference()
+            .child("reported_content")
+            .child("requests")
+            .child(request.id)
+
+        reportRef.observeSingleEvent(of: .value) { snapshot in
+            if snapshot.exists() {
+                return
+            } else {
+                reportRef.setValue(true) { error, _ in
+                    if error == nil {
+                        showReportAlert = true
+                    }
+                }
+            }
+        }
+    }
+
+    func deleteRequest() {
+        let requestRef = Database.database().reference()
+            .child("requests")
+            .child(request.ownerUid)
+            .child(request.id)
+
+        requestRef.removeValue()
+
+        let reportRef = Database.database().reference()
+            .child("reported_content")
+            .child("requests")
+            .child(request.id)
+
+        reportRef.removeValue()
+
+        // ✅ Notify parent view to refresh
+        onDelete?()
     }
 }
