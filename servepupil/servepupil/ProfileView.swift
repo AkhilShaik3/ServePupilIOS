@@ -86,7 +86,6 @@ struct ProfileView: View {
                             .padding(.horizontal)
                     }
 
-
                     NavigationLink(destination: ChangePasswordView()) {
                         Text("Change Password")
                             .foregroundColor(.blue)
@@ -106,6 +105,7 @@ struct ProfileView: View {
         guard let uid = Auth.auth().currentUser?.uid else { return }
 
         let ref = Database.database().reference().child("users").child(uid)
+
         ref.observeSingleEvent(of: .value) { snapshot in
             if let data = snapshot.value as? [String: Any] {
                 let user = UserModel(id: uid, data: data)
@@ -113,10 +113,18 @@ struct ProfileView: View {
                 bio = user.bio
                 phone = user.phone
                 imageUrl = user.imageUrl
-                followers = user.followers
-                following = user.following
             }
-            isLoading = false
+
+            // 🔁 Count followers
+            ref.child("followers").observeSingleEvent(of: .value) { followerSnap in
+                followers = Int(followerSnap.childrenCount)
+
+                // 🔁 Count following
+                ref.child("following").observeSingleEvent(of: .value) { followingSnap in
+                    following = Int(followingSnap.childrenCount)
+                    isLoading = false
+                }
+            }
         }
     }
 }
