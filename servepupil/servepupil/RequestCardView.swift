@@ -13,6 +13,8 @@ struct RequestCardView: View {
     @State private var commentCount = 0
     @State private var likedByMe = false
     @State private var showReportAlert = false
+    @State private var showDeleteConfirmation = false
+
 
     private let currentUid = Auth.auth().currentUser?.uid ?? ""
     private var isAdmin: Bool {
@@ -104,22 +106,34 @@ struct RequestCardView: View {
             if showEditDelete {
                 HStack(spacing: 20) {
                     if !isAdmin {
-                        Button("Edit") { }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(14)
+                        NavigationLink(destination: EditRequestView(request: request)) {
+                            Text("Edit")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(14)
+                        }
+
                     }
 
                     Button("Delete") {
-                        deleteRequest()
+                        showDeleteConfirmation = true
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.red)
                     .foregroundColor(.white)
                     .cornerRadius(14)
+                    .alert("Confirm Delete", isPresented: $showDeleteConfirmation) {
+                        Button("Cancel", role: .cancel) { }
+                        Button("Delete", role: .destructive) {
+                            deleteRequest()
+                        }
+                    } message: {
+                        Text("Are you sure you want to delete this request?")
+                    }
+
                 }
             } else {
                 Button("Report Post") {
