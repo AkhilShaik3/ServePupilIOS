@@ -106,12 +106,15 @@ struct RequestCardView: View {
             if showEditDelete {
                 HStack(spacing: 20) {
                     if !isAdmin {
-                        Button("Edit") { }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(14)
+                        NavigationLink(destination: EditRequestView(request: request)) {
+                            Text("Edit")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(14)
+                        }
+
                     }
 
                     Button("Delete") {

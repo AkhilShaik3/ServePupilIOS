@@ -260,13 +260,21 @@ struct CreateRequestView: View {
             } else {
                 alertMessage = "Your request has been submitted successfully."
                 showAlert = true
+
+                // ✅ Clear fields
                 description = ""
                 requestType = ""
                 place = ""
                 selectedImage = nil
+
+                // ✅ Dismiss after a short delay so user can see the alert
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    dismiss()
+                }
             }
         }
     }
+
 }
 
 struct MapPinLocation: Identifiable {
