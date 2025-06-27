@@ -1,11 +1,3 @@
-//
-//  UserListView.swift
-//  servepupil
-//
-//  Created by Admin on 6/18/25.
-//
-
-
 import SwiftUI
 import FirebaseDatabase
 import SDWebImageSwiftUI
@@ -13,6 +5,7 @@ import SDWebImageSwiftUI
 struct UserListView: View {
     @State private var users: [UserModel] = []
     @State private var blockedUserIds: Set<String> = []
+    private var usersRef = Database.database().reference().child("users")
 
     var body: some View {
         NavigationStack {
@@ -32,8 +25,6 @@ struct UserListView: View {
                                     .frame(width: 50, height: 50)
                                     .foregroundColor(.gray)
                             }
-
-
 
                             VStack(alignment: .leading) {
                                 Text(user.name)
@@ -57,8 +48,11 @@ struct UserListView: View {
                                     .cornerRadius(8)
                             }
 
-                            Image(systemName: "pencil")
-                                .foregroundColor(.black)
+                            // ✅ Always show edit button
+                            NavigationLink(destination: EditUserView(user: user)) {
+                                Image(systemName: "pencil")
+                                    .foregroundColor(.blue)
+                            }
                         }
                         .padding(.horizontal)
                     }
@@ -67,39 +61,36 @@ struct UserListView: View {
             }
             .navigationTitle("Users List")
             .onAppear {
-                fetchUsers()
+                observeUsers()
             }
         }
     }
 
-    func fetchUsers() {
-        let ref = Database.database().reference().child("users")
-        ref.observeSingleEvent(of: .value) { snapshot in
+    func observeUsers() {
+        usersRef.observe(.value) { snapshot in
             var tempUsers: [UserModel] = []
+            var tempBlocked: Set<String> = []
+
             for child in snapshot.children {
                 if let snap = child as? DataSnapshot,
                    let data = snap.value as? [String: Any] {
                     let user = UserModel(id: snap.key, data: data)
                     tempUsers.append(user)
 
-                    // Example: Check for block status under each user
                     if let isBlocked = data["isBlocked"] as? Bool, isBlocked {
-                        blockedUserIds.insert(snap.key)
+                        tempBlocked.insert(snap.key)
                     }
                 }
             }
+
             self.users = tempUsers
+            self.blockedUserIds = tempBlocked
         }
     }
 
     func toggleBlock(for user: UserModel) {
-        let ref = Database.database().reference().child("users").child(user.id).child("isBlocked")
+        let ref = usersRef.child(user.id).child("isBlocked")
         let newStatus = !blockedUserIds.contains(user.id)
         ref.setValue(newStatus)
-        if newStatus {
-            blockedUserIds.insert(user.id)
-        } else {
-            blockedUserIds.remove(user.id)
-        }
     }
 }

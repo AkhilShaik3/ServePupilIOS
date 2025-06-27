@@ -46,6 +46,10 @@ struct UserHomeView: View {
                     NavigationLink(destination: ViewMyRequestsView()) {
                         HomeButton(title: "View My Requests")
                     }
+                    NavigationLink(destination: PersonalFeedView()) {
+                        HomeButton(title: "Personal Feed")
+                    }
+
 
                     Button(action: {
                         logout()
