@@ -61,20 +61,22 @@ struct ProfileView: View {
                         .font(.subheadline)
 
                     HStack(spacing: 40) {
-                        VStack {
-                            Text("\(followers)")
-                                .bold()
-                            Text("Followers")
-                                .font(.caption)
+                        NavigationLink(destination: FollowerListView(uid: Auth.auth().currentUser?.uid ?? "")) {
+                            VStack {
+                                Text("\(followers)").bold()
+                                Text("Followers").font(.caption)
+                            }
                         }
-                        VStack {
-                            Text("\(following)")
-                                .bold()
-                            Text("Following")
-                                .font(.caption)
+
+                        NavigationLink(destination: FollowingListView(uid: Auth.auth().currentUser?.uid ?? "")) {
+                            VStack {
+                                Text("\(following)").bold()
+                                Text("Following").font(.caption)
+                            }
                         }
                     }
                     .padding(.top, 10)
+
 
                     NavigationLink(destination: EditProfileView()) {
                         Text("Edit Profile")
@@ -85,7 +87,6 @@ struct ProfileView: View {
                             .cornerRadius(10)
                             .padding(.horizontal)
                     }
-
 
                     NavigationLink(destination: ChangePasswordView()) {
                         Text("Change Password")
@@ -106,6 +107,7 @@ struct ProfileView: View {
         guard let uid = Auth.auth().currentUser?.uid else { return }
 
         let ref = Database.database().reference().child("users").child(uid)
+
         ref.observeSingleEvent(of: .value) { snapshot in
             if let data = snapshot.value as? [String: Any] {
                 let user = UserModel(id: uid, data: data)
@@ -113,10 +115,18 @@ struct ProfileView: View {
                 bio = user.bio
                 phone = user.phone
                 imageUrl = user.imageUrl
-                followers = user.followers
-                following = user.following
             }
-            isLoading = false
+
+            // 🔁 Count followers
+            ref.child("followers").observeSingleEvent(of: .value) { followerSnap in
+                followers = Int(followerSnap.childrenCount)
+
+                // 🔁 Count following
+                ref.child("following").observeSingleEvent(of: .value) { followingSnap in
+                    following = Int(followingSnap.childrenCount)
+                    isLoading = false
+                }
+            }
         }
     }
 }

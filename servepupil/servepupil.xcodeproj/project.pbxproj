@@ -432,6 +432,8 @@
 				DEVELOPMENT_ASSET_PATHS = "\"servepupil/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Location access is needed to show nearby places.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app uses your location to center the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -460,6 +462,8 @@
 				DEVELOPMENT_ASSET_PATHS = "\"servepupil/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Location access is needed to show nearby places.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app uses your location to center the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

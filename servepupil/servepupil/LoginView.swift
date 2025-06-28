@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseAuth
+import FirebaseDatabase
 
 struct LoginView: View {
     @State private var email: String = ""
@@ -82,15 +83,29 @@ struct LoginView: View {
             if let error = error {
                 alertMessage = "Login failed: \(error.localizedDescription)"
                 showAlert = true
-            } else {
-                if email.lowercased() == "admin@gmail.com" {
-                    showAdminHome = true
-                } else {
-                    showUserHome = true
+            } else if let user = authResult?.user {
+                let uid = user.uid
+                let dbRef = Database.database().reference().child("users/\(uid)/isBlocked")
+                
+                dbRef.observeSingleEvent(of: .value) { snapshot in
+                    if let isBlocked = snapshot.value as? Bool, isBlocked {
+                        // Blocked user: show alert and sign out
+                        alertMessage = "Your account has been blocked. Please contact support."
+                        showAlert = true
+                        try? Auth.auth().signOut()
+                    } else {
+                        // User not blocked: proceed to appropriate home screen
+                        if email.lowercased() == "admin@gmail.com" {
+                            showAdminHome = true
+                        } else {
+                            showUserHome = true
+                        }
+                    }
                 }
             }
         }
     }
+
 
     func clearFields() {
         email = ""
