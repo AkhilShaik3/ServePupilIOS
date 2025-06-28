@@ -2,6 +2,7 @@ import SwiftUI
 import SDWebImageSwiftUI
 import Firebase
 import FirebaseAuth
+
 struct UserProfileView: View {
     let uid: String
 
@@ -75,12 +76,11 @@ struct UserProfileView: View {
                     Text(isFollowing ? "Unfollow" : "Follow")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(isFollowing ? Color.gray : Color.teal)
+                        .background(Color.teal)
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 }
                 .padding(.horizontal)
-
 
                 Button("Report User") {
                     reportUser()
@@ -100,6 +100,14 @@ struct UserProfileView: View {
             loadProfile()
             checkIfFollowing()
         }
+        .onDisappear {
+            let ref = Database.database().reference()
+                .child("users")
+                .child(currentUid)
+                .child("following")
+                .child(uid)
+            ref.removeAllObservers()
+        }
         .alert(alertMessage, isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
         }
@@ -108,21 +116,21 @@ struct UserProfileView: View {
     func loadProfile() {
         let ref = Database.database().reference().child("users").child(uid)
 
-        ref.observeSingleEvent(of: .value) { snapshot in
+        ref.observe(.value) { snapshot in
             if let data = snapshot.value as? [String: Any] {
                 name = data["name"] as? String ?? "User"
                 phone = data["phone"] as? String ?? ""
                 address = data["address"] as? String ?? ""
                 profileImageUrl = data["imageUrl"] as? String
             }
+        }
 
-            ref.child("followers").observeSingleEvent(of: .value) { snap in
-                followers = Int(snap.childrenCount)
-            }
+        ref.child("followers").observe(.value) { snap in
+            followers = Int(snap.childrenCount)
+        }
 
-            ref.child("following").observeSingleEvent(of: .value) { snap in
-                following = Int(snap.childrenCount)
-            }
+        ref.child("following").observe(.value) { snap in
+            following = Int(snap.childrenCount)
         }
     }
 
@@ -133,7 +141,7 @@ struct UserProfileView: View {
             .child("following")
             .child(uid)
 
-        ref.observeSingleEvent(of: .value) { snapshot in
+        ref.observe(.value) { snapshot in
             isFollowing = snapshot.exists()
         }
     }
@@ -144,13 +152,11 @@ struct UserProfileView: View {
         let viewedUserFollowersRef = userRef.child(uid).child("followers").child(currentUid)
 
         if isFollowing {
-            // 🔻 UNFOLLOW
             currentUserFollowingRef.removeValue()
             viewedUserFollowersRef.removeValue()
             isFollowing = false
             followers = max(followers - 1, 0)
         } else {
-            // 🔺 FOLLOW
             currentUserFollowingRef.setValue(true)
             viewedUserFollowersRef.setValue(true)
             isFollowing = true

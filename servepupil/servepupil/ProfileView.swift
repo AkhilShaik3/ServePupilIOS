@@ -61,20 +61,22 @@ struct ProfileView: View {
                         .font(.subheadline)
 
                     HStack(spacing: 40) {
-                        VStack {
-                            Text("\(followers)")
-                                .bold()
-                            Text("Followers")
-                                .font(.caption)
+                        NavigationLink(destination: FollowerListView(uid: Auth.auth().currentUser?.uid ?? "")) {
+                            VStack {
+                                Text("\(followers)").bold()
+                                Text("Followers").font(.caption)
+                            }
                         }
-                        VStack {
-                            Text("\(following)")
-                                .bold()
-                            Text("Following")
-                                .font(.caption)
+
+                        NavigationLink(destination: FollowingListView(uid: Auth.auth().currentUser?.uid ?? "")) {
+                            VStack {
+                                Text("\(following)").bold()
+                                Text("Following").font(.caption)
+                            }
                         }
                     }
                     .padding(.top, 10)
+
 
                     NavigationLink(destination: EditProfileView()) {
                         Text("Edit Profile")
